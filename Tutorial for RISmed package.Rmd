@@ -1,0 +1,113 @@
+---
+title: "Tutorial for RISmed package"
+author: "ZhanhaoSu"
+date: "2020/3/22"
+output: html_document
+---
+
+```{r import the package}
+library(RISmed)
+library(tidyverse)
+library(ggpubr)
+library(tidytext) # The package for text mining in R
+library(wordcloud)
+```
+
+## 1. My publication
+```{r my publication}
+zhanhaosu <- EUtilsSummary("zhanhao su", type = 'esearch', db = 'pubmed')
+
+summary(zhanhaosu)
+```
+
+```{r the PMID of my publications}
+QueryId(zhanhaosu)
+```
+
+
+## 2. Key words: single-cell
+```{r}
+single_cell <- EUtilsSummary('single-cell', type = 'esearch', db = 'pubmed')
+
+summary(single_cell)
+```
+
+```{r}
+query_single_cell = "heart OR cardiac AND single-cell"
+
+single_cell_heart <- EUtilsSummary(query_single_cell, type = 'esearch', db = 'pubmed')
+
+summary(single_cell_heart)
+```
+
+```{r download the search records}
+single_cell_heart_record <- EUtilsGet(single_cell_heart)
+```
+
+```{r}
+summary(single_cell_heart_record@PMID)
+```
+
+```{r create table for pub years}
+Years_tbl <- as.data.frame(table(YearPubmed(single_cell_heart_record)))
+
+names(Years_tbl)[1] <- "Year"
+```
+
+```{r plot the pub year}
+Years_tbl %>% 
+    ggline(
+        x = "Year", y = "Freq",
+        ylab = "Counts"
+    )
+```
+
+```{r find the journal with most publications}
+Journal_tbl <- as.data.frame(table(MedlineTA(single_cell_heart_record)))
+
+Journal_tbl %>% 
+    arrange(desc(Freq)) %>% 
+    view()
+```
+
+### Create the dataframe with needed information and analyse the dataset
+```{r}
+Single_cel_heart_abs <- data.frame(
+    Title = single_cell_heart_record@ArticleTitle,
+    Abstract = single_cell_heart_record@AbstractText,
+    Journal = single_cell_heart_record@Title,
+    PMID = single_cell_heart_record@PMID,
+    Year = single_cell_heart_record@YearPubmed
+)
+```
+
+```{r check for pub year}
+Single_cel_heart_abs %>% 
+    group_by(Year) %>% 
+    summarise(count = n()) %>% 
+    ggbarplot(
+        x = "Year", y = "count"
+    )
+```
+
+```{r transform into character}
+Single_cel_heart_abs$Abstract <- as.character(Single_cel_heart_abs$Abstract)
+```
+
+
+#### Word cloud analysis
+```{r create the word cloud}
+single_cell_cloud <- Single_cel_heart_abs %>% 
+    unnest_tokens(word, Abstract) %>% 
+    anti_join(stop_words) %>% 
+    count(word, sort = T) %>% 
+    view(word)
+
+```
+
+```{r plot the cloud}
+single_cell_cloud %>% 
+    with(wordcloud(word, n, min.freq = 50, max.words = 1000, colors = brewer.pal(8, "Dark2"), scale = c(8, 0.5), rot.per = 0.4))
+```
+
+
