@@ -2,7 +2,7 @@
 title: "Tutorial for RISmed package"
 author: "ZhanhaoSu"
 date: "2020/3/22"
-output: html_document
+output: github_document
 ---
 
 ```{r import the package}
